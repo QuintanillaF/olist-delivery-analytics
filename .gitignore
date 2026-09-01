@@ -1,0 +1,27 @@
+# data is downloaded, never committed (but keep the folder in the tree)
+/data/*
+!/data/.gitkeep
+
+# duckdb build artefacts
+*.duckdb
+*.duckdb.wal
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# generated figures are rebuilt by run_all.py; keep the ones embedded in the
+# README under version control only if you decide to (see README)
+# figures/
+
+# os / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# kaggle credentials
+kaggle.json

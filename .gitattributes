@@ -1,0 +1,9 @@
+# Normalise line endings: LF in the repo, native in the working copy.
+* text=auto eol=lf
+
+# Binary — never touch line endings, never try to diff as text.
+*.png binary
+*.duckdb binary
+
+# Notebooks: keep them out of the language stats, mark for nbdiff tooling.
+*.ipynb linguist-language=Jupyter\ Notebook diff=jupyternotebook
