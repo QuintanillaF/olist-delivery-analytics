@@ -12,9 +12,6 @@ comentadas en [`sql/`](sql/) — nada escondido dentro de pandas. Python ([`src/
 sólo carga los CSV, ejecuta los `.sql` y dibuja los gráficos. La narrativa completa está
 en [`notebooks/olist_analysis.ipynb`](notebooks/olist_analysis.ipynb).
 
-> ¿Nunca tocaste SQL, DuckDB ni un notebook? Leé primero **[GUIA.md](GUIA.md)** — explica
-> todo desde cero y cómo contar este proyecto en una entrevista.
-
 ---
 
 ## Los tres hallazgos principales
