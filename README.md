@@ -165,6 +165,4 @@ data/          en .gitignore — los CSV crudos van en data/raw/
 GUIA.md       explicación desde cero de todo el proyecto
 ```
 
-**Fuera de alcance:** sin machine learning (ninguna pregunta lo necesita), sin dashboard,
-sin relleno del tipo "top 10 por facturación" — cada análisis termina en una decisión que
-alguien podría tomar.
+
