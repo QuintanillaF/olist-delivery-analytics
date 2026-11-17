@@ -29,6 +29,7 @@
 --   * Multi-seller orders: one row per order, taking the farthest seller - that
 --     leg sets the delivery date.
 --   * is_clean_delivered orders only.
+--   * Late = stg_orders.is_late (a later calendar day than promised).
 -- ============================================================================
 
 WITH order_seller_geo AS (
@@ -41,8 +42,7 @@ WITH order_seller_geo AS (
                          o.order_delivered_customer_date)              AS days_vs_estimate,
         date_diff('hour', o.order_purchase_timestamp,
                           o.order_delivered_carrier_date) / 24.0       AS seller_handover_days,
-        (o.order_delivered_customer_date
-         > o.order_estimated_delivery_date)                            AS is_late,
+        o.is_late,
         2 * 6371 * asin(sqrt(
             pow(sin(radians(cg.lat - sg.lat) / 2), 2)
           + cos(radians(sg.lat)) * cos(radians(cg.lat))

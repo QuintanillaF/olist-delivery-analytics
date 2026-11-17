@@ -21,6 +21,10 @@
 --     timestamp (timestamp corruption) -> flagged, not dropped, so each
 --     analysis can decide.
 --   * Some order_status = 'delivered' rows have a NULL delivery date -> flagged.
+--   * order_estimated_delivery_date is a day with no time of day (always
+--     00:00:00). Comparing it with the delivery TIMESTAMP calls every parcel
+--     delivered during the promised day "late" (1,292 orders) -> lateness is
+--     decided on calendar days, once, in stg_orders.is_late.
 --   * geolocation has many GPS points per zip prefix, a few off-continent
 --     -> collapsed to one robust (median) point per prefix, Brazil bbox only.
 --   * product category names are Portuguese -> joined to the English
@@ -28,7 +32,8 @@
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
--- Orders. No rows dropped here. Timestamps kept as-is; two quality flags added.
+-- Orders. No rows dropped here. Timestamps kept as-is; quality flags and the
+-- lateness rule added.
 -- ----------------------------------------------------------------------------
 CREATE OR REPLACE VIEW stg_orders AS
 SELECT
@@ -51,7 +56,18 @@ SELECT
      AND order_delivered_customer_date < order_purchase_timestamp)  AS f_delivered_before_purchase,
 
     (order_status = 'delivered'
-     AND order_delivered_customer_date IS NULL)                     AS f_delivered_status_no_date
+     AND order_delivered_customer_date IS NULL)                     AS f_delivered_status_no_date,
+
+    -- Late = delivered on a later CALENDAR DAY than the one promised.
+    -- The promise is a day, not a moment: order_estimated_delivery_date is
+    -- always stored at 00:00:00, so comparing timestamps would call a parcel
+    -- that arrives at 3 pm on the promised day late. 1,292 orders arrive on
+    -- the promised day, and their reviews (4.03) look like on-time orders, not
+    -- like late ones (2.99 for 1-5 days late).
+    -- NULL while the order has no delivery date. Every query and the star
+    -- schema take lateness from this column; it is defined nowhere else.
+    (date_diff('day', order_estimated_delivery_date,
+                      order_delivered_customer_date) > 0)           AS is_late
 FROM olist_orders_dataset;
 
 -- ----------------------------------------------------------------------------

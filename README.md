@@ -58,9 +58,9 @@ La fecha estimada de Olist ya escala con la distancia — la ventana prometida v
 días para São Paulo a 40–47 días para los estados del Amazonas, y esos clientes lejanos
 después le ganan a la estimación por 17–20 días. El **tiempo que tarda el vendedor en
 despachar** predice el incumplimiento ~2,5× mejor que la distancia. Los estados con más
-retrasos reales son los de la **costa nordeste, a distancia media** — Alagoas 24% tarde,
-Maranhão 20% — donde la ventana prometida quedó demasiado ajustada para la variación
-real.
+retrasos reales son los de la **costa nordeste, a distancia media** — Alagoas 21,5% tarde,
+Maranhão 17,3%, contra 4,5% en São Paulo — donde la ventana prometida quedó demasiado
+ajustada para la variación real.
 
 **Decisión:** la distancia no es la palanca. Hacer cumplir los plazos de despacho de los
 vendedores, y ampliar la ventana prometida para AL / MA / PI / CE / SE unos 5–7 días (o
@@ -90,6 +90,7 @@ se decidió:
 | `geolocation` tiene muchos puntos GPS por prefijo postal, algunos fuera del continente | 42 filas fuera del recuadro de Brasil | colapsar a la **mediana** de lat/long por prefijo, sólo dentro de Brasil |
 | Prefijo postal de cliente/vendedor ausente en `geolocation` | 279 clientes, 7 vendedores | descartados sólo del análisis de distancia (Q6), ~0,3% |
 | 2016 es un piloto | sept 2016: 2 pedidos · oct: 290 · dic: 1 | marcados `is_partial_month`; excluidos de la tendencia en Q5 |
+| La fecha de entrega prometida no tiene hora (siempre 00:00) | todos los pedidos; 1.292 entregados durante el día prometido | "tarde" = entregado un **día calendario** después del prometido, definido una sola vez (`stg_orders.is_late`). Comparando fecha y hora, quien recibe a las 15:00 del día prometido contaría como tarde (6,8% de entregas tarde con esta regla, 8,1% con la otra) |
 
 Base utilizable para las preguntas de entrega: **96.470 pedidos entregados limpios**,
 **95.824** de ellos con reseña.
@@ -104,11 +105,11 @@ decisión. El desarrollo completo está en el [notebook](notebooks/olist_analysi
 | # | Pregunta | Número principal | Decisión |
 |---|---|---|---|
 | **1** | ¿El tiempo de entrega predice la nota? ¿Lineal o umbral? — [`01_*`](sql/) | *r* = −0,33; en fecha ≈ 4,2★, 6–10 días tarde ≈ 1,8★. Un **umbral en la fecha prometida**, no una pendiente. | Disparar la intervención *antes* de incumplir la fecha; dejar de optimizar los pedidos que ya llegan bien. |
-| **2** | Peores categorías contra su estimación de entrega, y el costo en reseñas — [`02_category_delivery_performance.sql`](sql/02_category_delivery_performance.sql) | Todas las categorías le ganan a su estimación en promedio; la **cola** de atrasos es 4–13%. `audio` 12,8% tarde; llegar tarde cuesta 1,2–2,1★ dentro de una categoría. Más daño *total*: salud/belleza, cama/baño (volumen). | Arreglar las rutas de `audio`/`electronics`; atacar la *tasa* de atraso en las categorías de volumen. |
+| **2** | Peores categorías contra su estimación de entrega, y el costo en reseñas — [`02_category_delivery_performance.sql`](sql/02_category_delivery_performance.sql) | Todas las categorías le ganan a su estimación en promedio; la **cola** de atrasos es 4–12%. `audio` 11,6% tarde; llegar tarde cuesta 1,3–2,5★ dentro de una categoría. Más daño *total*: salud/belleza, cama/baño (volumen). | Arreglar las rutas de `audio`/`electronics`; atacar la *tasa* de atraso en las categorías de volumen. |
 | **3** | ¿Qué fracción compra dos veces? ¿Una mala primera compra predice el abandono? — [`03_repeat_customers*.sql`](sql/) | **3,1%** recompra alguna vez. Tasa de recompra por primera reseña: 1★ → 3,4%, 5★ → 3,9% (plana). | Construir el caso de calidad de entrega sobre la reputación del primer pedido, no sobre LTV/retención. |
 | **4** | Segmentar vendedores por volumen, fiabilidad y reseñas — [`04_seller_segmentation.sql`](sql/04_seller_segmentation.sql) | Núcleo: 233 vendedores / 37% facturación / 3% tarde. **En riesgo: 824 vendedores / 13% facturación / 39% tarde / 2,96★.** Los "En ascenso" (1.411) despachan *mejor* que el Núcleo. | Poner en probación o dar de baja a los 824 en riesgo; hacer crecer a los "En ascenso" en vez de exprimir al Núcleo. |
 | **5** | Estacionalidad de ingresos y pedidos, tendencia, anomalías — [`05_revenue_seasonality.sql`](sql/05_revenue_seasonality.sql) | ~8× de crecimiento durante 2017, después **plano todo 2018** (bajando en el segundo semestre). El ticket promedio nunca se movió (~R$160). Única anomalía: Black Friday 2017 (+11σ en un día). | El crecimiento es un problema de adquisición, no una caída estacional — necesita su propio diagnóstico. |
-| **6** | ¿La distancia explica los retrasos de entrega? — [`06_geo_*.sql`](sql/) | *r*(distancia, tránsito) = 0,39; *r*(distancia, atraso) = −0,08. El tiempo de despacho predice mejor el atraso. Estados con retrasos = costa nordeste (AL 24%). | Hacer cumplir los plazos de despacho; ampliar la ventana prometida para AL/MA/PI/CE/SE. |
+| **6** | ¿La distancia explica los retrasos de entrega? — [`06_geo_*.sql`](sql/) | *r*(distancia, tránsito) = 0,39; *r*(distancia, atraso) = −0,08. El tiempo de despacho predice mejor el atraso. Estados con retrasos = costa nordeste (AL 21,5%). | Hacer cumplir los plazos de despacho; ampliar la ventana prometida para AL/MA/PI/CE/SE. |
 
 ---
 
@@ -131,6 +132,34 @@ decisión. El desarrollo completo está en el [notebook](notebooks/olist_analysi
 
 ---
 
+## Capa de BI: modelo estrella y dashboard
+
+Además del análisis, el repositorio incluye el modelo de datos sobre el que se arma un
+dashboard en Power BI o Looker Studio: un **modelo estrella** construido en SQL
+([`sql/star/`](sql/star/)) sobre las mismas vistas `stg_*`.
+
+| Tabla | Grano | Filas |
+|---|---|---:|
+| `fct_order_items` | una línea de pedido | 112.650 |
+| `dim_date` | un día; cumple tres roles: compra, entrega y entrega prometida | 1.096 |
+| `dim_customer` | un cliente tal como era en un pedido | 99.441 |
+| `dim_seller` | un vendedor, con su segmento | 3.095 |
+| `dim_product` | un producto | 32.951 |
+
+`python -m src.star` lo construye, lo testea y lo exporta: Parquet para Power BI y una
+tabla plana en CSV para Looker Studio. Antes de exportar corren 35 tests de datos
+(grano, integridad referencial, conciliación con el origen al centavo) y 5
+reconciliaciones contra las consultas del análisis (calificación por banda de atraso,
+atraso por categoría, recompra, segmentos de vendedores, ventas mensuales). Si algo falla, no se exporta nada.
+
+| Documento | Contenido |
+|---|---|
+| [`docs/modelo_estrella.md`](docs/modelo_estrella.md) | el modelo, el diccionario de datos y el porqué de cada decisión de diseño |
+| [`docs/medidas.md`](docs/medidas.md) | los indicadores en DAX y como campos calculados de Looker Studio, con valores de control |
+| [`docs/dashboard.md`](docs/dashboard.md) | el diseño de las dos páginas del dashboard y el paso a paso para armarlas |
+
+---
+
 ## Cómo reproducirlo
 
 Windows (PowerShell). Python 3.10+.
@@ -148,8 +177,10 @@ python run_all.py
 ```
 
 `run_all.py` construye la base DuckDB desde los CSV, ejecuta cada consulta de
-[`sql/`](sql/), regenera cada gráfico en [`figures/`](figures/), y ejecuta el notebook de
-punta a punta. `data/` y el `*.duckdb` generado están en el `.gitignore`.
+[`sql/`](sql/), regenera cada gráfico en [`figures/`](figures/), ejecuta el notebook de
+punta a punta, y construye, testea y exporta el modelo estrella a `data/bi/` (ese
+último paso también corre solo con `python -m src.star`). `data/` y el `*.duckdb`
+generado están en el `.gitignore`.
 
 ---
 
@@ -157,12 +188,14 @@ punta a punta. `data/` y el `*.duckdb` generado están en el `.gitignore`.
 
 ```
 sql/          consultas numeradas y comentadas — un análisis cada una, 00_staging.sql primero
+sql/star/     el modelo estrella: una tabla por archivo, más sus tests (99_tests.sql)
 src/          config (rutas + paleta) · db (CSV → DuckDB) · queries (ejecuta un .sql → DataFrame) · plots
+              star (construye, testea y exporta el modelo estrella)
+docs/         modelo_estrella.md · medidas.md · dashboard.md · powerbi_theme.json
 notebooks/    olist_analysis.ipynb — la narrativa: calidad de datos → 6 preguntas → limitaciones
 scripts/      download_data.py
 figures/      gráficos, regenerados por run_all.py, incrustados arriba
-data/          en .gitignore — los CSV crudos van en data/raw/
-GUIA.md       explicación desde cero de todo el proyecto
+data/          en .gitignore — los CSV crudos van en data/raw/, los exports de BI en data/bi/
 ```
 
 

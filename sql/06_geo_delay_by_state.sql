@@ -15,6 +15,7 @@
 --
 -- Same geo build / filters as 06_geo_distance_vs_delay.sql. States with
 -- < 100 delivered orders are kept but are noise - flagged low_sample.
+-- Late = stg_orders.is_late (a later calendar day than promised).
 -- ============================================================================
 
 WITH order_seller_geo AS (
@@ -29,8 +30,7 @@ WITH order_seller_geo AS (
                          o.order_estimated_delivery_date)        AS estimate_window_days,
         date_diff('hour', o.order_purchase_timestamp,
                           o.order_delivered_carrier_date) / 24.0 AS seller_handover_days,
-        (o.order_delivered_customer_date
-         > o.order_estimated_delivery_date)                      AS is_late,
+        o.is_late,
         2 * 6371 * asin(sqrt(
             pow(sin(radians(cg.lat - sg.lat) / 2), 2)
           + cos(radians(sg.lat)) * cos(radians(cg.lat))

@@ -26,6 +26,9 @@
 --
 -- DATA-QUALITY DECISIONS
 --   * is_clean_delivered orders only; estimated date must be present.
+--   * Late = stg_orders.is_late: delivered on a later calendar day than the
+--     one promised. The promise carries no time of day, so a parcel that
+--     arrives during the promised day is on time (see 00_staging.sql).
 --   * An order with items from several categories counts once per distinct
 --     category (order_category CTE) - delivery is an order-level event, so the
 --     same outcome is attributed to each category the basket touched.
@@ -42,8 +45,7 @@ WITH order_delivery AS (
         date_diff('day',
                   o.order_estimated_delivery_date,
                   o.order_delivered_customer_date)                 AS days_vs_estimate,
-        (o.order_delivered_customer_date
-         > o.order_estimated_delivery_date)                        AS is_late,
+        o.is_late,
         r.review_score
     FROM stg_orders        AS o
     JOIN stg_order_reviews AS r ON r.order_id = o.order_id

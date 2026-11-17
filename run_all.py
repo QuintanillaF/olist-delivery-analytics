@@ -10,25 +10,27 @@ Steps:
   2. run every sql/*.sql analysis query, print a preview
   3. regenerate every figure in figures/
   4. execute notebooks/olist_analysis.ipynb end to end (if nbclient is present)
+  5. build the star schema (sql/star/), test it, and export it for Power BI
+     and Looker Studio into data/bi/
 """
 
 from __future__ import annotations
 
 import sys
 
-from src import plots
+from src import plots, star
 from src.config import FIGURES_DIR, SQL_DIR
 from src.db import build_database
 from src.queries import list_queries, run_sql_file
 
 
 def step_build() -> None:
-    print("\n[1/4] Building database")
+    print("\n[1/5] Building database")
     build_database()
 
 
 def step_run_queries() -> dict:
-    print("\n[2/4] Running analysis queries")
+    print("\n[2/5] Running analysis queries")
     results = {}
     for name in list_queries():
         df = run_sql_file(name)
@@ -38,7 +40,7 @@ def step_run_queries() -> dict:
 
 
 def step_figures(results: dict) -> None:
-    print("\n[3/4] Rendering figures")
+    print("\n[3/5] Rendering figures")
     plots.apply_style()
     r = results  # {query filename: DataFrame}
 
@@ -57,7 +59,7 @@ def step_figures(results: dict) -> None:
 
 
 def step_notebook() -> None:
-    print("\n[4/4] Executing notebook")
+    print("\n[4/5] Executing notebook")
     nb_path = SQL_DIR.parent / "notebooks" / "olist_analysis.ipynb"
     if not nb_path.exists():
         print("  (notebook not present yet - skipping)")
@@ -78,12 +80,18 @@ def step_notebook() -> None:
     print(f"  executed {nb_path}")
 
 
+def step_star() -> None:
+    print("\n[5/5] Star schema: build, test, export")
+    star.build_and_export()
+
+
 def main() -> int:
     step_build()
     results = step_run_queries()
     step_figures(results)
     step_notebook()
-    print(f"\nDone. Figures in {FIGURES_DIR}")
+    step_star()
+    print(f"\nDone. Figures in {FIGURES_DIR}, BI exports in {star.BI_DIR}")
     return 0
 
 
